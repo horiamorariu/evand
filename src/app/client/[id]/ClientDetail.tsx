@@ -16,6 +16,7 @@ interface Props {
   lastName: string;
   cnp: string;
   address: string;
+  propertyAddress: string;
   createdAt: string;
   docCount: number;
   notes: string;
@@ -36,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
   complet: "bg-green-100 text-green-700",
 };
 
-export default function ClientDetail({ clientId, firstName, lastName, cnp, address, createdAt, notes: initialNotes, documents }: Props) {
+export default function ClientDetail({ clientId, firstName, lastName, cnp, address, propertyAddress, createdAt, notes: initialNotes, documents }: Props) {
   const [notes, setNotes] = useState(initialNotes);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,7 +56,7 @@ export default function ClientDetail({ clientId, firstName, lastName, cnp, addre
 
   function openCalendar() {
     const title = encodeURIComponent(`${firstName} ${lastName} — Dosar imobiliar`);
-    const details = encodeURIComponent(`CNP: ${cnp}\nAdresă: ${address}`);
+    const details = encodeURIComponent(`Proprietate: ${propertyAddress || address}\nCNP: ${cnp}`);
     const now = new Date();
     const start = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
     const end = new Date(now.getTime() + 60 * 60 * 1000).toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
@@ -86,7 +87,10 @@ export default function ClientDetail({ clientId, firstName, lastName, cnp, addre
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-4">
           <h2 className="text-lg font-bold text-gray-900">{firstName} {lastName}</h2>
           <p className="text-sm text-gray-500 mt-1">CNP: {cnp}</p>
-          <p className="text-sm text-gray-500">{address}</p>
+          {propertyAddress && (
+            <p className="text-sm font-medium text-blue-700 mt-1">📍 {propertyAddress}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-0.5">Domiciliu: {address}</p>
           <p className="text-xs text-gray-400 mt-1">
             {new Date(createdAt).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>

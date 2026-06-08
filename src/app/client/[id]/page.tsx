@@ -59,6 +59,7 @@ export default async function ClientPage({ params }: Props) {
       lastName={c.last_name ?? ""}
       cnp={c.cnp ?? ""}
       address={c.address ?? ""}
+      propertyAddress={c.property_address ?? ""}
       createdAt={c.created_at?.toDate?.().toISOString() ?? ""}
       docCount={c.doc_count ?? 0}
       notes={c.notes ?? ""}
