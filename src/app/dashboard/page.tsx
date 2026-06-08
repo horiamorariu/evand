@@ -10,6 +10,8 @@ interface ClientRow {
   id: string;
   first_name: string;
   last_name: string;
+  address: string;
+  cnp: string;
   created_at: string;
   doc_count: number;
   notes?: string;
@@ -50,6 +52,8 @@ export default async function DashboardPage() {
       id: doc.id,
       first_name: d.first_name,
       last_name: d.last_name,
+      address: d.address ?? "",
+      cnp: d.cnp ?? "",
       created_at: d.created_at?.toDate?.().toISOString() ?? "",
       doc_count: d.doc_count ?? 0,
       notes: d.notes ?? "",
@@ -126,8 +130,11 @@ export default async function DashboardPage() {
                         href={`/client/${client.id}`}
                         className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:border-blue-200 transition-colors"
                       >
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium text-gray-900">{client.first_name} {client.last_name}</p>
+                          {client.address && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">{client.address}</p>
+                          )}
                           <p className="text-xs text-gray-400 mt-0.5">
                             {new Date(client.created_at).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
                             {" · "}{client.doc_count} doc.
