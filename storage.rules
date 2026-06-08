@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // PDF-uri generate — organizate ca documents/{clientId}/{fileName}
+    match /documents/{clientId}/{fileName} {
+      // Agentul poate citi documentele clienților săi
+      // (verificarea completă e server-side; regulile storage sunt un al doilea strat)
+      allow read: if request.auth != null;
+
+      // Scriere doar din server (Admin SDK bypass rules)
+      allow write: if false;
+    }
+  }
+}
