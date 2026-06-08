@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/firebase/session";
 import LogoutButton from "@/components/layout/LogoutButton";
+import AdminSection from "./AdminSection";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function DashboardPage() {
   if (!sessionUser) redirect("/auth/login");
 
   const { profile, agency } = sessionUser;
+  const isAdmin = profile.role === "admin";
 
   const now = new Date();
   const todayFormatted = now.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -23,9 +25,6 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-600">{profile.full_name}</span>
-          {profile.role === "admin" && (
-            <a href="/admin" className="text-xs text-blue-600 hover:underline font-medium">Admin</a>
-          )}
           <LogoutButton />
         </div>
       </header>
@@ -49,6 +48,8 @@ export default async function DashboardPage() {
             <span className="text-sm font-semibold">Istoric</span>
           </Link>
         </div>
+
+        {isAdmin && <AdminSection />}
       </main>
     </div>
   );
