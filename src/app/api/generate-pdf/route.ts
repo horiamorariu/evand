@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     buletin_series: buletinData.series,
     buletin_number: buletinData.number,
     address: buletinData.address,
+    property_address: extraFields.property_address ?? "",
     birthdate: buletinData.birthdate,
     buletin_expiry: buletinData.expiry_date,
     doc_count: 0,

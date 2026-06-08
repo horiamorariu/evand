@@ -35,6 +35,7 @@ export default async function HistoryPage() {
       last_name: d.last_name ?? "",
       cnp: d.cnp ?? "",
       address: d.address ?? "",
+      property_address: d.property_address ?? "",
       created_at: d.created_at?.toDate?.().toISOString() ?? "",
       doc_count: d.doc_count ?? 0,
       notes: d.notes ?? "",

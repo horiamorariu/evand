@@ -10,8 +10,7 @@ interface ClientRow {
   id: string;
   first_name: string;
   last_name: string;
-  address: string;
-  cnp: string;
+  property_address: string;
   created_at: string;
   doc_count: number;
   notes?: string;
@@ -52,8 +51,7 @@ export default async function DashboardPage() {
       id: doc.id,
       first_name: d.first_name,
       last_name: d.last_name,
-      address: d.address ?? "",
-      cnp: d.cnp ?? "",
+      property_address: d.property_address ?? "",
       created_at: d.created_at?.toDate?.().toISOString() ?? "",
       doc_count: d.doc_count ?? 0,
       notes: d.notes ?? "",
@@ -132,8 +130,8 @@ export default async function DashboardPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-gray-900">{client.first_name} {client.last_name}</p>
-                          {client.address && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">{client.address}</p>
+                          {client.property_address && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">📍 {client.property_address}</p>
                           )}
                           <p className="text-xs text-gray-400 mt-0.5">
                             {new Date(client.created_at).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
