@@ -1,32 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/firebase/session";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { generateMandat, generateGdpr } from "@/lib/pdf/generate";
+import { generateMandat, generateGdpr, generateFisaVizionare, generateExclusivitate, generateBonRezervare } from "@/lib/pdf/generate";
 import { Timestamp } from "firebase-admin/firestore";
-import type { BuletinData, DocumentType, MandatExtraFields } from "@/types";
+import type { BuletinData, DocumentType, ExtraFields, ScenarioData } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 interface RequestBody {
   buletinData: BuletinData;
   selectedDocs: DocumentType[];
-  extraFields: Partial<MandatExtraFields>;
+  extraFields: ExtraFields;
+  scenarioData?: ScenarioData;
   signatureBase64?: string;
 }
 
+const DOC_LABELS: Record<DocumentType, string> = {
+  mandat: "Contract de mandat",
+  gdpr: "Acord GDPR",
+  fisa_vizionare: "Fisa de vizionare",
+  exclusivitate: "Contract de exclusivitate",
+  bon_rezervare: "Bon de rezervare",
+};
+
 export async function POST(request: NextRequest) {
   const sessionUser = await getSessionUser();
-  if (!sessionUser) {
-    return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
-  }
+  if (!sessionUser) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
   const { uid, profile, agency } = sessionUser;
   const body: RequestBody = await request.json();
-  const { buletinData, selectedDocs, extraFields, signatureBase64 } = body;
+  const { buletinData, selectedDocs, extraFields, scenarioData, signatureBase64 } = body;
 
   const db = getAdminDb();
 
-  // Salvează clientul în Firestore
   const clientRef = db.collection("clients").doc();
   await clientRef.set({
     agent_id: uid,
@@ -37,9 +43,11 @@ export async function POST(request: NextRequest) {
     buletin_series: buletinData.series,
     buletin_number: buletinData.number,
     address: buletinData.address,
-    property_address: extraFields.property_address ?? "",
     birthdate: buletinData.birthdate,
     buletin_expiry: buletinData.expiry_date,
+    property_address: extraFields.property_address ?? "",
+    tip_tranzactie: scenarioData?.tip_tranzactie ?? "",
+    tip_proprietate: scenarioData?.tip_proprietate ?? "",
     doc_count: 0,
     created_at: Timestamp.now(),
   });
@@ -51,12 +59,18 @@ export async function POST(request: NextRequest) {
     let pdfBytes: Uint8Array;
 
     if (docType === "mandat") {
-      if (!extraFields.property_address) {
-        return NextResponse.json({ error: "Campuri mandat incomplete" }, { status: 400 });
-      }
-      pdfBytes = await generateMandat({ ...opts, extra: extraFields as MandatExtraFields });
-    } else {
+      if (!extraFields.property_address) return NextResponse.json({ error: "Adresa proprietatii lipseste" }, { status: 400 });
+      pdfBytes = await generateMandat({ ...opts, extra: extraFields });
+    } else if (docType === "gdpr") {
       pdfBytes = await generateGdpr(opts);
+    } else if (docType === "fisa_vizionare") {
+      pdfBytes = await generateFisaVizionare({ ...opts, extra: extraFields });
+    } else if (docType === "exclusivitate") {
+      pdfBytes = await generateExclusivitate({ ...opts, extra: extraFields });
+    } else if (docType === "bon_rezervare") {
+      pdfBytes = await generateBonRezervare({ ...opts, extra: extraFields });
+    } else {
+      continue;
     }
 
     const base64 = Buffer.from(pdfBytes).toString("base64");
@@ -78,16 +92,7 @@ export async function POST(request: NextRequest) {
     generatedDocs.push({ type: docType, dataUrl, filename });
   }
 
-  await clientRef.update({ doc_count: selectedDocs.length });
+  await clientRef.update({ doc_count: generatedDocs.length });
 
-  await db.collection("audit_logs").add({
-    agent_id: uid,
-    action: "generate_documents",
-    resource_type: "client",
-    resource_id: clientRef.id,
-    metadata: { doc_types: selectedDocs },
-    created_at: Timestamp.now(),
-  });
-
-  return NextResponse.json({ clientId: clientRef.id, documents: generatedDocs });
+  return NextResponse.json({ documents: generatedDocs });
 }

@@ -1,5 +1,8 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
-import { BuletinData, MandatExtraFields, Agency, Profile } from "@/types";
+import { BuletinData, ExtraFields, Agency, Profile } from "@/types";
+
+// backwards compat
+type MandatExtraFields = ExtraFields;
 
 function ro(text: string): string {
   return text
@@ -105,8 +108,8 @@ export async function generateMandat(
 
   dt("DATE PROPRIETATE", margin, y, 10, true);
   y -= 18;
-  y = line("Adresa proprietatii", extra.property_address, y);
-  y = line("Tip mandat", extra.mandate_type, y);
+  y = line("Adresa proprietatii", extra.property_address ?? "-", y);
+  y = line("Tip mandat", extra.mandate_type ?? "-", y);
   y = line("Comision", `${extra.commission_percent}%`, y);
   y = line("Durata mandat", `${extra.duration_months} luni`, y);
   y -= 12;
@@ -162,6 +165,162 @@ export async function generateGdpr(opts: GenerateOptions): Promise<Uint8Array> {
     y = drawWrapped(page, para, margin, y, maxW, 10, fontRegular, 16);
     y -= 10;
   }
+
+  return doc.save();
+}
+
+// Helper: page skeleton shared by simple docs
+async function makeDoc() {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595, 842]);
+  const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  return { doc, page, fontRegular, fontBold, width: 595, height: 842 };
+}
+
+export async function generateFisaVizionare(
+  opts: GenerateOptions & { extra: ExtraFields }
+): Promise<Uint8Array> {
+  const { buletinData, agent, agency, extra } = opts;
+  const { doc, page, fontRegular, fontBold, width, height } = await makeDoc();
+  const margin = 50;
+  const maxW = width - margin * 2;
+  const valueX = margin + 150;
+  const valueMaxW = width - margin - valueX;
+  let y = height - margin;
+  const today = new Date().toLocaleDateString("ro-RO");
+
+  function dt(text: string, x: number, yPos: number, size = 11, bold = false) {
+    page.drawText(ro(text), { x, y: yPos, size, font: bold ? fontBold : fontRegular, color: rgb(0.1, 0.1, 0.1) });
+  }
+  function line(label: string, value: string, yPos: number): number {
+    dt(`${label}:`, margin, yPos, 10, true);
+    const lines = wrapText(value, valueMaxW, fontRegular, 10);
+    let ly = yPos;
+    for (const l of lines) { page.drawText(l, { x: valueX, y: ly, size: 10, font: fontRegular, color: rgb(0.1, 0.1, 0.1) }); ly -= 14; }
+    return Math.min(ly, yPos - 18);
+  }
+
+  dt(agency.name, margin, y, 14, true); y -= 16;
+  y = drawWrapped(page, `CUI: ${agency.cui} | ${agency.address}`, margin, y, maxW, 9, fontRegular, 13); y -= 14;
+  page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) }); y -= 22;
+  dt("FISA DE VIZIONARE", margin, y, 14, true); y -= 32;
+
+  dt("DATE CLIENT", margin, y, 10, true); y -= 18;
+  y = line("Nume si prenume", `${buletinData.last_name} ${buletinData.first_name}`, y);
+  y = line("CNP", buletinData.cnp, y);
+  y = line("Buletin", `${buletinData.series} ${buletinData.number}`, y); y -= 12;
+
+  dt("DATE PROPRIETATE", margin, y, 10, true); y -= 18;
+  y = line("Adresa", extra.property_address ?? "-", y); y -= 12;
+
+  dt("DATE AGENT", margin, y, 10, true); y -= 18;
+  y = line("Agent", agent.full_name, y);
+  y = line("Agentie", agency.name, y);
+  y = line("Data vizionarii", today, y); y -= 25;
+
+  drawWrapped(page,
+    "Prin semnarea prezentei fise, confirm ca am vizionat proprietatea de mai sus prin intermediul agentiei si ca am fost informat cu privire la conditiile de intermediere.",
+    margin, y, maxW, 9, fontRegular, 14);
+
+  return doc.save();
+}
+
+export async function generateExclusivitate(
+  opts: GenerateOptions & { extra: ExtraFields }
+): Promise<Uint8Array> {
+  const { buletinData, agent, agency, extra } = opts;
+  const { doc, page, fontRegular, fontBold, width, height } = await makeDoc();
+  const margin = 50;
+  const maxW = width - margin * 2;
+  const valueX = margin + 150;
+  const valueMaxW = width - margin - valueX;
+  let y = height - margin;
+  const today = new Date().toLocaleDateString("ro-RO");
+
+  function dt(text: string, x: number, yPos: number, size = 11, bold = false) {
+    page.drawText(ro(text), { x, y: yPos, size, font: bold ? fontBold : fontRegular, color: rgb(0.1, 0.1, 0.1) });
+  }
+  function line(label: string, value: string, yPos: number): number {
+    dt(`${label}:`, margin, yPos, 10, true);
+    const lines = wrapText(value, valueMaxW, fontRegular, 10);
+    let ly = yPos;
+    for (const l of lines) { page.drawText(l, { x: valueX, y: ly, size: 10, font: fontRegular, color: rgb(0.1, 0.1, 0.1) }); ly -= 14; }
+    return Math.min(ly, yPos - 18);
+  }
+
+  dt(agency.name, margin, y, 14, true); y -= 16;
+  y = drawWrapped(page, `CUI: ${agency.cui} | ${agency.address}`, margin, y, maxW, 9, fontRegular, 13); y -= 14;
+  page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) }); y -= 22;
+  dt("CONTRACT DE EXCLUSIVITATE", margin, y, 14, true); y -= 32;
+
+  dt("DATE PROPRIETAR", margin, y, 10, true); y -= 18;
+  y = line("Nume si prenume", `${buletinData.last_name} ${buletinData.first_name}`, y);
+  y = line("CNP", buletinData.cnp, y);
+  y = line("Domiciliu", buletinData.address, y); y -= 12;
+
+  dt("DATE PROPRIETATE", margin, y, 10, true); y -= 18;
+  y = line("Adresa", extra.property_address ?? "-", y);
+  if (extra.commission_percent !== undefined) y = line("Comision", `${extra.commission_percent}%`, y);
+  if (extra.duration_months) y = line("Durata", `${extra.duration_months} luni`, y); y -= 12;
+
+  dt("DATE AGENT", margin, y, 10, true); y -= 18;
+  y = line("Agent", agent.full_name, y);
+  y = line("Agentie", agency.name, y);
+  y = line("Data semnarii", today, y); y -= 25;
+
+  drawWrapped(page,
+    "Proprietarul acorda agentiei dreptul exclusiv de intermediere a vanzarii/inchirierii proprietatii descrise mai sus pe durata mentionata. In aceasta perioada, proprietarul nu va incheia contracte de intermediere cu alte agentii.",
+    margin, y, maxW, 9, fontRegular, 14);
+
+  return doc.save();
+}
+
+export async function generateBonRezervare(
+  opts: GenerateOptions & { extra: ExtraFields }
+): Promise<Uint8Array> {
+  const { buletinData, agent, agency, extra } = opts;
+  const { doc, page, fontRegular, fontBold, width, height } = await makeDoc();
+  const margin = 50;
+  const maxW = width - margin * 2;
+  const valueX = margin + 150;
+  const valueMaxW = width - margin - valueX;
+  let y = height - margin;
+  const today = new Date().toLocaleDateString("ro-RO");
+
+  function dt(text: string, x: number, yPos: number, size = 11, bold = false) {
+    page.drawText(ro(text), { x, y: yPos, size, font: bold ? fontBold : fontRegular, color: rgb(0.1, 0.1, 0.1) });
+  }
+  function line(label: string, value: string, yPos: number): number {
+    dt(`${label}:`, margin, yPos, 10, true);
+    const lines = wrapText(value, valueMaxW, fontRegular, 10);
+    let ly = yPos;
+    for (const l of lines) { page.drawText(l, { x: valueX, y: ly, size: 10, font: fontRegular, color: rgb(0.1, 0.1, 0.1) }); ly -= 14; }
+    return Math.min(ly, yPos - 18);
+  }
+
+  dt(agency.name, margin, y, 14, true); y -= 16;
+  y = drawWrapped(page, `CUI: ${agency.cui} | ${agency.address}`, margin, y, maxW, 9, fontRegular, 13); y -= 14;
+  page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) }); y -= 22;
+  dt("BON DE REZERVARE", margin, y, 14, true); y -= 32;
+
+  dt("DATE CLIENT", margin, y, 10, true); y -= 18;
+  y = line("Nume si prenume", `${buletinData.last_name} ${buletinData.first_name}`, y);
+  y = line("CNP", buletinData.cnp, y);
+  y = line("Buletin", `${buletinData.series} ${buletinData.number}`, y); y -= 12;
+
+  dt("DATE PROPRIETATE", margin, y, 10, true); y -= 18;
+  y = line("Adresa", extra.property_address ?? "-", y);
+  y = line("Suma rezervare", `${extra.suma_rezervare ?? "-"} ${extra.moneda ?? "RON"}`, y); y -= 12;
+
+  dt("DATE AGENT", margin, y, 10, true); y -= 18;
+  y = line("Agent", agent.full_name, y);
+  y = line("Agentie", agency.name, y);
+  y = line("Data rezervarii", today, y); y -= 25;
+
+  drawWrapped(page,
+    "Prin achitarea sumei de rezervare mentionate mai sus, cumparatorul rezerva proprietatea descrisa si isi exprima intentia ferma de cumparare. Suma de rezervare va fi dedusa din pretul de vanzare final.",
+    margin, y, maxW, 9, fontRegular, 14);
 
   return doc.save();
 }

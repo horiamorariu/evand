@@ -4,11 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ScanStep from "./ScanStep";
 import VerifyStep from "./VerifyStep";
+import ScenarioStep from "./ScenarioStep";
 import DocumentsStep from "./DocumentsStep";
 import ExtraFieldsStep from "./ExtraFieldsStep";
-import { BuletinData, DocumentType, MandatExtraFields } from "@/types";
+import { BuletinData, DocumentType, ScenarioData, ExtraFields, getScenarioDocs } from "@/types";
 
-type Step = "scan" | "verify" | "documents" | "extra-fields" | "done";
+type Step = "scan" | "verify" | "scenario" | "documents" | "extra-fields" | "done";
+
+const DOC_LABELS: Record<DocumentType, string> = {
+  mandat: "Contract de mandat",
+  gdpr: "Acord GDPR",
+  fisa_vizionare: "Fișă de vizionare",
+  exclusivitate: "Contract de exclusivitate",
+  bon_rezervare: "Bon de rezervare",
+};
 
 interface GeneratedDoc {
   type: DocumentType;
@@ -20,22 +29,29 @@ export default function NewClientPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("scan");
   const [buletinData, setBuletinData] = useState<BuletinData | null>(null);
+  const [scenarioData, setScenarioData] = useState<ScenarioData | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<DocumentType[]>([]);
   const [generatedDocs, setGeneratedDocs] = useState<GeneratedDoc[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const flowSteps: Step[] = ["scan", "verify", "documents", "extra-fields"];
+  const flowSteps: Step[] = ["scan", "verify", "scenario", "documents", "extra-fields"];
   const stepIndex = flowSteps.indexOf(step as never);
 
-  async function handleGenerate(fields: Partial<MandatExtraFields>) {
+  function handleScenario(data: ScenarioData) {
+    setScenarioData(data);
+    setSelectedDocs(getScenarioDocs(data));
+    setStep("documents");
+  }
+
+  async function handleGenerate(fields: ExtraFields) {
     setGenerating(true);
     setError(null);
     try {
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ buletinData, selectedDocs, extraFields: fields }),
+        body: JSON.stringify({ buletinData, selectedDocs, extraFields: fields, scenarioData }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -68,17 +84,11 @@ export default function NewClientPage() {
 
           <div className="w-full space-y-3">
             {generatedDocs.map((doc) => (
-              <a
-                key={doc.type}
-                href={doc.dataUrl}
-                download={doc.filename}
-                className="flex items-center justify-between w-full bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-100 hover:border-blue-300 transition-colors"
-              >
+              <a key={doc.type} href={doc.dataUrl} download={doc.filename}
+                className="flex items-center justify-between w-full bg-white rounded-xl px-4 py-4 shadow-sm border border-gray-100 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📄</span>
-                  <span className="font-medium text-gray-900">
-                    {doc.type === "mandat" ? "Contract de mandat" : "Acord GDPR"}
-                  </span>
+                  <span className="font-medium text-gray-900">{DOC_LABELS[doc.type] ?? doc.type}</span>
                 </div>
                 <span className="text-blue-600 text-sm font-medium">Descarcă →</span>
               </a>
@@ -90,14 +100,11 @@ export default function NewClientPage() {
               onClick={() => {
                 const name = `${buletinData.first_name} ${buletinData.last_name}`;
                 const title = encodeURIComponent(`${name} — Dosar imobiliar`);
-                const details = encodeURIComponent(`CNP: ${buletinData.cnp}\nAdresă: ${buletinData.address}`);
+                const details = encodeURIComponent(`Proprietate: ${buletinData.address}\nCNP: ${buletinData.cnp}`);
                 const now = new Date();
                 const start = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
                 const end = new Date(now.getTime() + 60 * 60 * 1000).toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
-                window.open(
-                  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`,
-                  "_blank"
-                );
+                window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`, "_blank");
               }}
               className="w-full rounded-xl bg-white border border-gray-200 hover:border-blue-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:text-blue-700 transition-colors flex items-center justify-center gap-2"
             >
@@ -105,10 +112,8 @@ export default function NewClientPage() {
             </button>
           )}
 
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-          >
+          <button onClick={() => router.push("/dashboard")}
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
             Înapoi la dashboard
           </button>
         </main>
@@ -132,12 +137,7 @@ export default function NewClientPage() {
           <div className="flex-1">
             <div className="flex gap-1">
               {flowSteps.map((s, i) => (
-                <div
-                  key={s}
-                  className={`h-1 flex-1 rounded-full transition-colors ${
-                    i <= stepIndex ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                />
+                <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${i <= stepIndex ? "bg-blue-600" : "bg-gray-200"}`} />
               ))}
             </div>
           </div>
@@ -149,31 +149,25 @@ export default function NewClientPage() {
         {step === "scan" && (
           <ScanStep onComplete={(data) => { setBuletinData(data); setStep("verify"); }} />
         )}
-
         {step === "verify" && buletinData && (
-          <VerifyStep
-            initialData={buletinData}
-            onComplete={(data) => { setBuletinData(data); setStep("documents"); }}
-          />
+          <VerifyStep initialData={buletinData} onComplete={(data) => { setBuletinData(data); setStep("scenario"); }} />
         )}
-
-        {step === "documents" && (
+        {step === "scenario" && (
+          <ScenarioStep onComplete={handleScenario} />
+        )}
+        {step === "documents" && scenarioData && (
           <DocumentsStep
-            selected={selectedDocs}
+            preSelected={selectedDocs}
             onComplete={(docs) => { setSelectedDocs(docs); setStep("extra-fields"); }}
           />
         )}
-
-        {step === "extra-fields" && buletinData && (
+        {step === "extra-fields" && buletinData && scenarioData && (
           <>
-            {error && (
-              <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">
-                {error}
-              </p>
-            )}
+            {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{error}</p>}
             <ExtraFieldsStep
               buletinData={buletinData}
               selectedDocs={selectedDocs}
+              tipProprietate={scenarioData.tip_proprietate}
               extraFields={{}}
               onComplete={handleGenerate}
             />
