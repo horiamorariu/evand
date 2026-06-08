@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import MonthCalendar from "@/app/admin/MonthCalendar";
+import WeekCalendar from "@/app/admin/WeekCalendar";
 import DailySummary from "@/app/admin/DailySummary";
 import type { DocumentStatus } from "@/types";
 
@@ -16,23 +16,33 @@ interface DocRow {
   signed_file_data?: string;
 }
 
+function getMondayOf(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diff = (day + 6) % 7; // Monday = 0
+  d.setDate(d.getDate() - diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function AdminSection() {
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(today);
+  const [weekStart, setWeekStart] = useState(() => getMondayOf(today));
   const [documents, setDocuments] = useState<DocRow[]>([]);
+  const [monthDocuments, setMonthDocuments] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const monthStart = selectedDate.slice(0, 7) + "-01";
-
-  const fetchDocuments = useCallback(async (monthStr: string) => {
+  const fetchWeek = useCallback(async (monday: string) => {
     setLoading(true);
     try {
-      const from = monthStr;
-      const d = new Date(monthStr);
-      d.setMonth(d.getMonth() + 1);
-      d.setDate(0);
-      const to = d.toISOString().slice(0, 10) + "T23:59:59";
-      const res = await fetch(`/api/admin/documents?from=${from}&to=${to}`);
+      const sunday = addDays(monday, 6);
+      const res = await fetch(`/api/admin/documents?from=${monday}&to=${sunday}T23:59:59`);
       const data = await res.json();
       setDocuments(data.documents ?? []);
     } finally {
@@ -40,47 +50,82 @@ export default function AdminSection() {
     }
   }, []);
 
+  const fetchMonth = useCallback(async () => {
+    const now = new Date();
+    const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const to = `${lastDay.toISOString().slice(0, 10)}T23:59:59`;
+    const res = await fetch(`/api/admin/documents?from=${from}&to=${to}`);
+    const data = await res.json();
+    setMonthDocuments(data.documents ?? []);
+  }, []);
+
   useEffect(() => {
-    fetchDocuments(monthStart);
-  }, [monthStart, fetchDocuments]);
+    fetchWeek(weekStart);
+  }, [weekStart, fetchWeek]);
+
+  useEffect(() => {
+    fetchMonth();
+  }, [fetchMonth]);
 
   function handleSelectDate(date: string) {
-    const newMonth = date.slice(0, 7) + "-01";
     setSelectedDate(date);
-    if (newMonth !== monthStart) fetchDocuments(newMonth);
+  }
+
+  function handlePrevWeek() {
+    const newMonday = addDays(weekStart, -7);
+    setWeekStart(newMonday);
+    setSelectedDate(newMonday);
+  }
+
+  function handleNextWeek() {
+    const newMonday = addDays(weekStart, 7);
+    setWeekStart(newMonday);
+    setSelectedDate(newMonday);
   }
 
   function handleStatusChange(id: string, status: DocumentStatus) {
     setDocuments((prev) => prev.map((d) => d.id === id ? { ...d, status } : d));
+    setMonthDocuments((prev) => prev.map((d) => d.id === id ? { ...d, status } : d));
   }
 
-  const todayCount = documents.filter((d) => d.created_at.startsWith(today)).length;
-  const monthCount = documents.length;
+  const SIGNED: DocumentStatus[] = ["semnat_olograf", "complet"];
+
+  const generatedToday = documents.filter((d) => d.created_at.startsWith(today)).length;
+  const signedToday = documents.filter((d) => d.created_at.startsWith(today) && SIGNED.includes(d.status)).length;
+  const monthTotal = monthDocuments.length;
+  const monthSigned = monthDocuments.filter((d) => SIGNED.includes(d.status)).length;
+  const signedPct = monthTotal > 0 ? Math.round((monthSigned / monthTotal) * 100) : 0;
 
   return (
     <div className="space-y-4 mt-6">
       <div className="border-t border-gray-200 pt-6">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Activitate agenție</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Activitate Agent</p>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-            <p className="text-xs text-gray-400 mb-1">Azi</p>
-            <p className="text-2xl font-bold text-gray-900">{todayCount}</p>
-            <p className="text-xs text-gray-400">documente</p>
+        {/* KPI-uri */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-3">
+            <p className="text-[10px] text-gray-400 mb-1 leading-tight">Generate azi</p>
+            <p className="text-2xl font-bold text-gray-900">{generatedToday}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-            <p className="text-xs text-gray-400 mb-1">Luna aceasta</p>
-            <p className="text-2xl font-bold text-gray-900">{loading ? "—" : monthCount}</p>
-            <p className="text-xs text-gray-400">documente</p>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-3">
+            <p className="text-[10px] text-gray-400 mb-1 leading-tight">Semnate azi</p>
+            <p className="text-2xl font-bold text-gray-900">{signedToday}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-3">
+            <p className="text-[10px] text-gray-400 mb-1 leading-tight">Semnate / lună</p>
+            <p className="text-2xl font-bold text-gray-900">{signedPct}<span className="text-sm font-normal text-gray-400">%</span></p>
           </div>
         </div>
 
-        {/* Calendar */}
-        <MonthCalendar
+        {/* Calendar săptămânal */}
+        <WeekCalendar
           documents={documents}
           selectedDate={selectedDate}
+          weekStart={weekStart}
           onSelectDate={handleSelectDate}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
         />
 
         {/* Sumar zilnic */}
