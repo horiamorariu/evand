@@ -52,22 +52,52 @@ export default function DailySummary({ documents, selectedDate, onStatusChange }
     weekday: "long", day: "numeric", month: "long",
   });
 
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("compress failed")), "image/jpeg", 0.75);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
   async function handleUpload(docId: string, file: File) {
     setUploading(docId);
     try {
+      // Comprimă imaginea dacă e prea mare
+      let uploadFile: File | Blob = file;
+      if (file.type.startsWith("image/") && file.size > 500 * 1024) {
+        uploadFile = await compressImage(file);
+      }
+
+      // Preview
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviews((p) => ({ ...p, [docId]: e.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
+      reader.onload = (e) => setPreviews((p) => ({ ...p, [docId]: e.target?.result as string }));
+      reader.readAsDataURL(uploadFile);
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", uploadFile, file.name);
       const res = await fetch(`/api/admin/documents/${docId}/upload`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload esuat");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Upload esuat");
+      }
       onStatusChange(docId, "semnat_olograf");
-    } catch {
-      alert("Upload esuat. Incearca din nou.");
+    } catch (e: unknown) {
+      alert((e as Error).message ?? "Upload esuat. Incearca din nou.");
     } finally {
       setUploading(null);
     }
