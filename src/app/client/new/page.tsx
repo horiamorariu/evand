@@ -85,6 +85,26 @@ export default function NewClientPage() {
             ))}
           </div>
 
+          {buletinData && (
+            <button
+              onClick={() => {
+                const name = `${buletinData.first_name} ${buletinData.last_name}`;
+                const title = encodeURIComponent(`${name} — Dosar imobiliar`);
+                const details = encodeURIComponent(`CNP: ${buletinData.cnp}\nAdresă: ${buletinData.address}`);
+                const now = new Date();
+                const start = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
+                const end = new Date(now.getTime() + 60 * 60 * 1000).toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
+                window.open(
+                  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`,
+                  "_blank"
+                );
+              }}
+              className="w-full rounded-xl bg-white border border-gray-200 hover:border-blue-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:text-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              📅 Adaugă eveniment în Google Calendar
+            </button>
+          )}
+
           <button
             onClick={() => router.push("/dashboard")}
             className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
