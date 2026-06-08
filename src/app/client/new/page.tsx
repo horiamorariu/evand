@@ -7,6 +7,7 @@ import VerifyStep from "./VerifyStep";
 import ScenarioStep from "./ScenarioStep";
 import DocumentsStep from "./DocumentsStep";
 import ExtraFieldsStep from "./ExtraFieldsStep";
+import CalendarModal from "@/components/CalendarModal";
 import { BuletinData, DocumentType, ScenarioData, ExtraFields, getScenarioDocs } from "@/types";
 
 type Step = "scan" | "verify" | "scenario" | "documents" | "extra-fields" | "done";
@@ -34,6 +35,8 @@ export default function NewClientPage() {
   const [generatedDocs, setGeneratedDocs] = useState<GeneratedDoc[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [lastExtraFields, setLastExtraFields] = useState<ExtraFields>({});
 
   const flowSteps: Step[] = ["scan", "verify", "scenario", "documents", "extra-fields"];
   const stepIndex = flowSteps.indexOf(step as never);
@@ -45,6 +48,7 @@ export default function NewClientPage() {
   }
 
   async function handleGenerate(fields: ExtraFields) {
+    setLastExtraFields(fields);
     setGenerating(true);
     setError(null);
     try {
@@ -97,19 +101,21 @@ export default function NewClientPage() {
 
           {buletinData && (
             <button
-              onClick={() => {
-                const name = `${buletinData.first_name} ${buletinData.last_name}`;
-                const title = encodeURIComponent(`${name} — Dosar imobiliar`);
-                const details = encodeURIComponent(`Proprietate: ${buletinData.address}\nCNP: ${buletinData.cnp}`);
-                const now = new Date();
-                const start = now.toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
-                const end = new Date(now.getTime() + 60 * 60 * 1000).toISOString().replace(/[-:]/g, "").slice(0, 15) + "00Z";
-                window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`, "_blank");
-              }}
+              onClick={() => setCalendarOpen(true)}
               className="w-full rounded-xl bg-white border border-gray-200 hover:border-blue-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:text-blue-700 transition-colors flex items-center justify-center gap-2"
             >
               📅 Adaugă eveniment în Google Calendar
             </button>
+          )}
+
+          {calendarOpen && buletinData && (
+            <CalendarModal
+              clientName={`${buletinData.last_name} ${buletinData.first_name}`}
+              tipTranzactie={scenarioData?.tip_tranzactie}
+              tipProprietate={scenarioData?.tip_proprietate}
+              propertyAddress={lastExtraFields.property_address}
+              onClose={() => setCalendarOpen(false)}
+            />
           )}
 
           <button onClick={() => router.push("/dashboard")}
