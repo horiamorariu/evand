@@ -21,9 +21,14 @@ export default function WeekCalendar({ documents, selectedDate, weekStart, onSel
   const _now = new Date();
   const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
+  function toLocalDate(iso: string): string {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   const counts: Record<string, number> = {};
   for (const doc of documents) {
-    const day = doc.created_at.slice(0, 10);
+    const day = toLocalDate(doc.created_at);
     counts[day] = (counts[day] ?? 0) + 1;
   }
 

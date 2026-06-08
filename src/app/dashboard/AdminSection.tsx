@@ -33,6 +33,11 @@ function addDays(dateStr: string, n: number): string {
   return localStr(d);
 }
 
+function toLocalDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function AdminSection() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -47,7 +52,7 @@ export default function AdminSection() {
     setLoading(true);
     try {
       const sunday = addDays(monday, 6);
-      const res = await fetch(`/api/admin/documents?from=${monday}&to=${sunday}T23:59:59`);
+      const res = await fetch(`/api/admin/documents?from=${monday}T00:00:00&to=${sunday}T23:59:59`);
       const data = await res.json();
       setDocuments(data.documents ?? []);
     } finally {
@@ -96,8 +101,8 @@ export default function AdminSection() {
 
   const SIGNED: DocumentStatus[] = ["semnat_olograf", "complet"];
 
-  const generatedToday = documents.filter((d) => d.created_at.startsWith(today)).length;
-  const signedToday = documents.filter((d) => d.created_at.startsWith(today) && SIGNED.includes(d.status)).length;
+  const generatedToday = documents.filter((d) => toLocalDate(d.created_at) === today).length;
+  const signedToday = documents.filter((d) => toLocalDate(d.created_at) === today && SIGNED.includes(d.status)).length;
   const monthTotal = monthDocuments.length;
   const monthSigned = monthDocuments.filter((d) => SIGNED.includes(d.status)).length;
   const signedPct = monthTotal > 0 ? Math.round((monthSigned / monthTotal) * 100) : 0;
@@ -139,7 +144,11 @@ export default function AdminSection() {
             onClick={() => setSummaryOpen((v) => !v)}
             className="w-full flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 text-left"
           >
-            <span className="text-sm font-semibold text-gray-700">Ce s-a semnat azi</span>
+            <span className="text-sm font-semibold text-gray-700">
+              {selectedDate === today
+                ? "Ce s-a semnat azi"
+                : `Documente — ${new Date(selectedDate + "T00:00:00").toLocaleDateString("ro-RO", { day: "numeric", month: "long" })}`}
+            </span>
             <span className="text-gray-400 text-lg">{summaryOpen ? "▾" : "▸"}</span>
           </button>
           {summaryOpen && (
