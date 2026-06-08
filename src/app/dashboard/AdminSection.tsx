@@ -37,6 +37,7 @@ export default function AdminSection() {
   const [documents, setDocuments] = useState<DocRow[]>([]);
   const [monthDocuments, setMonthDocuments] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(true);
 
   const fetchWeek = useCallback(async (monday: string) => {
     setLoading(true);
@@ -128,18 +129,29 @@ export default function AdminSection() {
           onNextWeek={handleNextWeek}
         />
 
-        {/* Sumar zilnic */}
+        {/* Sumar zilnic — colapsibil, doar azi */}
         <div className="mt-4">
-          {loading ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 flex justify-center">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <button
+            onClick={() => setSummaryOpen((v) => !v)}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 text-left"
+          >
+            <span className="text-sm font-semibold text-gray-700">Ce s-a semnat azi</span>
+            <span className="text-gray-400 text-lg">{summaryOpen ? "▾" : "▸"}</span>
+          </button>
+          {summaryOpen && (
+            <div className="mt-2">
+              {loading ? (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 flex justify-center">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <DailySummary
+                  documents={documents}
+                  selectedDate={today}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
             </div>
-          ) : (
-            <DailySummary
-              documents={documents}
-              selectedDate={selectedDate}
-              onStatusChange={handleStatusChange}
-            />
           )}
         </div>
       </div>
