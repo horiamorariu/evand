@@ -64,8 +64,13 @@ export async function POST(request: NextRequest) {
 
     await db.collection("documents").doc().set({
       client_id: clientRef.id,
+      agency_id: profile.agency_id,
       agent_id: uid,
+      agent_name: profile.full_name,
+      client_name: `${buletinData.last_name} ${buletinData.first_name}`,
+      client_cnp: buletinData.cnp,
       type: docType,
+      status: "generat",
       created_at: Timestamp.now(),
     });
 

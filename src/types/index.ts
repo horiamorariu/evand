@@ -52,14 +52,20 @@ export interface Client {
 
 // Document generat
 export type DocumentType = "mandat" | "gdpr";
+export type DocumentStatus = "generat" | "printat" | "semnat_olograf" | "complet";
 
 export interface Document {
   id: string;
   client_id: string;
   agent_id: string;
+  agency_id: string;
+  agent_name: string;
+  client_name: string;
+  client_cnp: string;
   type: DocumentType;
-  file_path: string;
-  signed_at?: string;
+  status: DocumentStatus;
+  file_path?: string;
+  signed_file_path?: string;
   created_at: string;
 }
 

@@ -82,6 +82,9 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-600">{profile.full_name}</span>
+          {profile.role === "admin" && (
+            <a href="/admin" className="text-xs text-blue-600 hover:underline font-medium">Admin</a>
+          )}
           <LogoutButton />
         </div>
       </header>
