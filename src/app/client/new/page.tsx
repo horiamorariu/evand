@@ -105,9 +105,9 @@ export default function NewClientPage() {
               if (stepIndex === 0) router.push("/dashboard");
               else setStep(flowSteps[stepIndex - 1]);
             }}
-            className="text-gray-400 hover:text-gray-600 text-lg"
+            className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg px-3 py-1.5 transition-colors"
           >
-            ‹
+            ← Înapoi
           </button>
           <div className="flex-1">
             <div className="flex gap-1">
