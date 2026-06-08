@@ -147,7 +147,7 @@ export default function AdminSection() {
               ) : (
                 <DailySummary
                   documents={documents}
-                  selectedDate={today}
+                  selectedDate={selectedDate}
                   onStatusChange={handleStatusChange}
                 />
               )}
