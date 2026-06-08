@@ -16,12 +16,6 @@ interface ClientRow {
   notes?: string;
 }
 
-function dayLabel(isoDate: string, todayStr: string, yesterdayStr: string): string {
-  const d = isoDate.slice(0, 10);
-  if (d === todayStr) return "Azi";
-  if (d === yesterdayStr) return "Ieri";
-  return new Date(isoDate).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" });
-}
 
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
@@ -58,19 +52,9 @@ export default async function DashboardPage() {
     };
   });
 
-  const grouped: { day: string; label: string; clients: ClientRow[] }[] = [];
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
-
-  for (const client of clients) {
-    const day = client.created_at.slice(0, 10);
-    const existing = grouped.find((g) => g.day === day);
-    if (existing) existing.clients.push(client);
-    else grouped.push({ day, label: dayLabel(client.created_at, todayStr, yesterdayStr), clients: [client] });
-  }
-
+  const todayClients = clients.filter((c) => c.created_at.slice(0, 10) === todayStr);
   const todayFormatted = now.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
@@ -110,43 +94,36 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Clienți recenți */}
-        {clients.length === 0 ? (
+        {/* Clienți azi */}
+        {todayClients.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">Niciun client încă.</p>
+            <p className="text-sm">Niciun client azi.</p>
             <p className="text-sm">Apasă „Generare documente" pentru a începe.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {grouped.map((group) => (
-              <div key={group.day}>
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{group.label}</h2>
-                <ul className="space-y-2">
-                  {group.clients.map((client) => (
-                    <li key={client.id}>
-                      <Link
-                        href={`/client/${client.id}`}
-                        className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:border-blue-200 transition-colors"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900">{client.first_name} {client.last_name}</p>
-                          {client.property_address && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">📍 {client.property_address}</p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {new Date(client.created_at).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
-                            {" · "}{client.doc_count} doc.
-                            {client.notes && <span className="ml-1">· 📝</span>}
-                          </p>
-                        </div>
-                        <span className="text-gray-300 text-lg">›</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <ul className="space-y-2">
+            {todayClients.map((client) => (
+              <li key={client.id}>
+                <Link
+                  href={`/client/${client.id}`}
+                  className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 hover:border-blue-200 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900">{client.first_name} {client.last_name}</p>
+                    {client.property_address && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">📍 {client.property_address}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(client.created_at).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
+                      {" · "}{client.doc_count} doc.
+                      {client.notes && <span className="ml-1">· 📝</span>}
+                    </p>
+                  </div>
+                  <span className="text-gray-300 text-lg">›</span>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </main>
     </div>
