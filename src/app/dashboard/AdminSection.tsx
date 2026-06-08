@@ -16,22 +16,26 @@ interface DocRow {
   signed_file_data?: string;
 }
 
+function localStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function getMondayOf(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
-  const diff = (day + 6) % 7; // Monday = 0
+  const diff = (d.getDay() + 6) % 7;
   d.setDate(d.getDate() - diff);
-  return d.toISOString().slice(0, 10);
+  return localStr(d);
 }
 
 function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return localStr(d);
 }
 
 export default function AdminSection() {
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(() => getMondayOf(today));
   const [documents, setDocuments] = useState<DocRow[]>([]);

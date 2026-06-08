@@ -46,7 +46,12 @@ export default function DailySummary({ documents, selectedDate, onStatusChange }
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const dayDocs = documents.filter((d) => d.created_at.startsWith(selectedDate));
+  function toLocalDate(iso: string): string {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const dayDocs = documents.filter((d) => toLocalDate(d.created_at) === selectedDate);
 
   const dateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString("ro-RO", {
     weekday: "long", day: "numeric", month: "long",
