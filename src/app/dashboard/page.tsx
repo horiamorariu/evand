@@ -33,7 +33,7 @@ export default async function DashboardPage() {
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
         <p className="text-xs text-gray-400 capitalize mb-4">{todayFormatted}</p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
           <Link
             href="/client/new"
             className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-5 text-white hover:bg-blue-700 transition-colors shadow-sm"
